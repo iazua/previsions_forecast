@@ -61,6 +61,17 @@ BASES = {
 }
 FORECAST_HORIZON = {"RRSS": 94, "FO": 94}
 
+# ── Nombres de los días --------------------------------------------------------
+DAY_NAMES = {
+    0: "Lunes",
+    1: "Martes",
+    2: "Miércoles",
+    3: "Jueves",
+    4: "Viernes",
+    5: "Sábado",
+    6: "Domingo",
+}
+
 # ╭──────────────────────────────────────────────╮
 # │ Carga en caché de modelos y datos            │
 # ╰──────────────────────────────────────────────╯
@@ -171,18 +182,16 @@ with tab1:
     )
 
 with tab2:
-    st.dataframe(
-        future_df[["dat", "con_pred"]]
-        .rename(columns={"dat": "Fecha", "con_pred": "Valor predicho"})
-        .reset_index(drop=True),
-        use_container_width=True,
+    table_df = future_df[["dat", "con_pred"]].copy()
+    table_df["Fecha"] = table_df["dat"].dt.strftime("%d-%m-%Y")
+    table_df["Día de la semana"] = table_df["dat"].dt.dayofweek.map(DAY_NAMES)
+    table_df = (
+        table_df[["Fecha", "Día de la semana", "con_pred"]]
+        .rename(columns={"con_pred": "Valor predicho"})
+        .reset_index(drop=True)
     )
-    csv = (
-        future_df[["dat", "con_pred"]]
-        .rename(columns={"dat": "Fecha", "con_pred": "Valor predicho"})
-        .to_csv(index=False)
-        .encode("utf-8")
-    )
+    st.dataframe(table_df, use_container_width=True)
+    csv = table_df.to_csv(index=False).encode("utf-8")
     st.download_button(
         f"⬇️ Descargar (.csv) {fuente}",
         csv,
