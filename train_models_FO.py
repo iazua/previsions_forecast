@@ -6,10 +6,11 @@ from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.preprocessing import LabelEncoder
 import pickle
 from datetime import datetime, timedelta
+from pathlib import Path
 
 # Cargar los datos
-file_path = r"C:\Users\iazuaz\PyCharmMiscProject\dotacion_predictor\model_FRONT\data\BBDD_calls_RRSS.xlsx"
-data = pd.read_excel(file_path)
+DATA_PATH = Path(__file__).resolve().parent / "BBDD_calls_RRSS.xlsx"
+data = pd.read_excel(DATA_PATH)
 
 # Limpieza y preprocesamiento
 # Convertir la columna de fecha a datetime
