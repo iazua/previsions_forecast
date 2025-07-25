@@ -205,19 +205,8 @@ if sel:
 tab1, tab2 = st.tabs([f"📈 Gráfico ({fuente})", f"📋 Tabla ({fuente})"])
 
 with tab1:
-    date_min = hist_df["dat"].min()
-    date_max = future_df["dat"].max()
-    date_range = st.slider(
-        "🗓️ Rango de visualización",
-        min_value=date_min,
-        max_value=date_max,
-        value=(date_min, date_max),
-        format="DD-MM-YYYY",
-    )
-    hist_slice = hist_df[(hist_df["dat"] >= date_range[0]) & (hist_df["dat"] <= date_range[1])]
-    fut_slice = future_df[(future_df["dat"] >= date_range[0]) & (future_df["dat"] <= date_range[1])]
     st.plotly_chart(
-        make_plot(hist_slice, fut_slice, f"Histórico y predicción ({fuente})"),
+        make_plot(hist_df, future_df, f"Histórico y predicción ({fuente})"),
         use_container_width=True,
         config={"displaylogo": False},
     )
