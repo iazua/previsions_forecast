@@ -14,15 +14,15 @@ st.set_page_config(
     page_title="Predicción previsiones FO y RRSS",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Estilos globales -----------------------------------------------------------------
 st.markdown(
     """
     <style>
-    /* App y sidebar */
-    .stApp, .css-1d391kg {background-color:#1a0033;}
+    /* Fondo de la aplicación */
+    .stApp {background-color:#1a0033;}
     /* DataFrame */
     .stDataFrame div[role="table"]{background-color:#1a0033 !important;color:#FFFFFF;}
     .stDataFrame th{background-color:#330066 !important;color:#FFFFFF;}
@@ -46,7 +46,7 @@ with col2:
 st.markdown("---")
 
 st.title("📊 Predicción previsiones FO y RRSS")
-st.caption("Selecciona la fuente en la barra lateral para alternar entre los modelos disponibles.")
+st.caption("Selecciona la fuente en las opciones de configuración para alternar entre los modelos disponibles.")
 
 # ╭──────────────────────────────────────────────╮
 # │ Rutas de modelos y bases                     │
@@ -77,10 +77,11 @@ def load_historical(path):
 models = load_all_models(MODELS)
 
 # ╭──────────────────────────────────────────────╮
-# │ Sidebar                                      │
+# │ Configuración de modelo                      │
 # ╰──────────────────────────────────────────────╯
-with st.sidebar:
-    fuente = st.radio("📂 Modelo", list(MODELS), index=0)
+fuente = st.radio(
+    "📂 Modelo", list(MODELS), index=0, horizontal=True
+)
 
 # ── Datos y modelo activos ──────────────────────
 mdata   = models[fuente]
@@ -141,19 +142,21 @@ FEATURES = ["year", "month", "day", "day_of_week", "week_of_year",
 future_df["con_pred"] = model.predict(future_df[FEATURES]).round().astype(int)
 
 # ╭──────────────────────────────────────────────╮
-# │ Sidebar ajustes                              │
+# │ Ajustes de predicción                        │
 # ╰──────────────────────────────────────────────╯
-with st.sidebar:
-    st.header("")
-    sel = st.multiselect('⚙️ Dias Cyber',
-                         options=future_df["dat"].dt.strftime("%Y-%m-%d"))
+adjust_box = st.expander("⚙️ Ajustes de predicción", expanded=True)
+with adjust_box:
+    sel = st.multiselect(
+        "Dias Cyber",
+        options=future_df["dat"].dt.strftime("%Y-%m-%d"),
+    )
     st.info(f"**R²:** {r2:.4f} | **MAE:** {mae:.4f}")
 
 if sel:
     sel_dt = pd.to_datetime(sel)
     future_df.loc[future_df["dat"].isin(sel_dt), "cyb_encoded"] = le.transform(["SI"] * len(sel_dt))
     future_df["con_pred"] = model.predict(future_df[FEATURES]).round().astype(int)
-    st.sidebar.success("Predicciones actualizadas ✔️")
+    adjust_box.success("Predicciones actualizadas ✔️")
 
 # ╭──────────────────────────────────────────────╮
 # │ Tabs de salida                               │
