@@ -144,7 +144,7 @@ future_df["con_pred"] = model.predict(future_df[FEATURES]).round().astype(int)
 # ╭──────────────────────────────────────────────╮
 # │ Ajustes de predicción                        │
 # ╰──────────────────────────────────────────────╯
-adjust_box = st.expander("⚙️ Ajustes de predicción", expanded=True)
+adjust_box = st.expander("⚙️ Ajustes de predicción", expanded=False)
 with adjust_box:
     sel = st.multiselect(
         "Dias Cyber",
