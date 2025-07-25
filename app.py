@@ -5,6 +5,17 @@ from datetime import timedelta
 import plotly.graph_objects as go   # Plotly para gráficos interactivos
 from pathlib import Path
 
+# Paleta de colores institucional
+PRIMARY_COLOR = "#4F2D7F"  # Minsk
+DARK_BG_COLOR = "#361860"  # Scarlet Gum
+PRIMARY_BG = "#F8F9FA"  # Fondos claros
+TABLE_BG_COLOR = DARK_BG_COLOR  # Tablas
+ACCENT_COLOR = "#F1AC4B"  # Sandy Brown
+WHITE = "#FFFFFF"
+BLACK = "#000000"
+ACCENT_RGBA = "rgba(241, 172, 75, 0.63)"  # Con opacidad
+PRIMARY_RGBA = "rgba(79, 45, 127, 1)"
+
 BASE_DIR = Path(__file__).resolve().parent
 
 # ╭──────────────────────────────────────────────╮
@@ -19,17 +30,36 @@ st.set_page_config(
 
 # ── Estilos globales -----------------------------------------------------------------
 st.markdown(
-    """
+    f"""
     <style>
+    :root {{
+        --primary-color: {PRIMARY_COLOR};
+        --dark-bg: {DARK_BG_COLOR};
+        --table-bg: {TABLE_BG_COLOR};
+        --primary-bg: {PRIMARY_BG};
+        --accent-color: {ACCENT_COLOR};
+        --white: {WHITE};
+        --black: {BLACK};
+    }}
+
     /* Fondo de la aplicación */
-    .stApp {background-color:#1a0033;}
+    .stApp {{background-color: var(--dark-bg);}}
+
     /* DataFrame */
-    .stDataFrame div[role="table"]{background-color:#1a0033 !important;color:#FFFFFF;}
-    .stDataFrame th{background-color:#330066 !important;color:#FFFFFF;}
+    .stDataFrame div[role="table"] {{background-color: var(--table-bg) !important;color: var(--white);}}
+    .stDataFrame th {{background-color: var(--primary-color) !important;color: var(--white);}}
+
     /* Plotly wrapper */
-    .stPlotlyChart div{background-color:#1a0033 !important;}
+    .stPlotlyChart div {{background-color: var(--dark-bg) !important;}}
+
     /* Textos principales */
-    h1,h2,h3,h4,h5,h6, p, div, span{color:#FFFFFF;}
+    h1,h2,h3,h4,h5,h6,p,div,span {{color: var(--white);}}
+
+    /* Botones */
+    .stButton>button, .stDownloadButton button {{
+        background-color: var(--accent-color);
+        color: var(--black);
+    }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -127,10 +157,10 @@ def add_features(df):
 def make_plot(hist, fut, title):
     fig = go.Figure()
     fig.add_scatter(x=hist["dat"], y=hist["con"], mode="lines", name="Histórico",
-                    line=dict(width=2),
+                    line=dict(width=2, color=PRIMARY_RGBA),
                     hovertemplate="%{x|%d-%m-%Y}<br>Histórico: %{y}<extra></extra>")
     fig.add_scatter(x=fut["dat"], y=fut["con_pred"], mode="lines", name="Predicción",
-                    line=dict(dash="dash", width=2),
+                    line=dict(dash="dash", width=2, color=ACCENT_COLOR),
                     hovertemplate="%{x|%d-%m-%Y}<br>Predicción: %{y}<extra></extra>")
     fig.update_layout(
         title=title,
