@@ -3,6 +3,9 @@ import pandas as pd
 import pickle
 from datetime import timedelta
 import plotly.graph_objects as go   # Plotly para gráficos interactivos
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
 
 # ╭──────────────────────────────────────────────╮
 # │ Configuración general                        │
@@ -49,12 +52,12 @@ st.caption("Selecciona la fuente en la barra lateral para alternar entre los mod
 # │ Rutas de modelos y bases                     │
 # ╰──────────────────────────────────────────────╯
 MODELS = {
-    "RRSS": r"C:\\Users\\iazuaz\\PyCharmMiscProject\\dotacion_predictor\\model_FRONT\\data\\con_prediction_model_rrss.pkl",
-    "FO": r"C:\\Users\\iazuaz\\PyCharmMiscProject\\dotacion_predictor\\model_FRONT\\data\\con_prediction_model.pkl",
+    "RRSS": BASE_DIR / "con_prediction_model_rrss.pkl",
+    "FO": BASE_DIR / "con_prediction_model.pkl",
 }
 BASES = {
-    "RRSS": r"C:\\Users\\iazuaz\\PyCharmMiscProject\\dotacion_predictor\\model_FRONT\\data\\BBDD_calls_RRSS.xlsx",
-    "FO": r"C:\\Users\\iazuaz\\PyCharmMiscProject\\dotacion_predictor\\model_FRONT\\data\\BBDD_calls2.xlsx",
+    "RRSS": BASE_DIR / "BBDD_calls_RRSS.xlsx",
+    "FO": BASE_DIR / "BBDD_calls2.xlsx",
 }
 FORECAST_HORIZON = {"RRSS": 94, "FO": 94}
 
