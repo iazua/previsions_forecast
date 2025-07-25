@@ -157,7 +157,7 @@ def add_features(df):
 def make_plot(hist, fut, title):
     fig = go.Figure()
     fig.add_scatter(x=hist["dat"], y=hist["con"], mode="lines", name="Histórico",
-                    line=dict(width=2, color=DARK_BG_COLOR),
+                    line=dict(width=2, color=PRIMARY_RGBA),
                     hovertemplate="%{x|%d-%m-%Y}<br>Histórico: %{y}<extra></extra>")
     fig.add_scatter(x=fut["dat"], y=fut["con_pred"], mode="lines", name="Predicción",
                     line=dict(dash="dash", width=2, color=ACCENT_COLOR),
