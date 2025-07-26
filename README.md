@@ -23,6 +23,9 @@ Pre‑trained models (`*.pkl`) are already included.
 streamlit run app.py
 ```
 
+The dashboard uses responsive styles so the layout looks consistent on
+desktop and mobile browsers (Android and iOS).
+
 ### Training a model
 ```bash
 python train_models_FO.py
