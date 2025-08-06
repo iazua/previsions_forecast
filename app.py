@@ -88,7 +88,7 @@ BASES = {
     "RRSS": BASE_DIR / "BBDD_calls_RRSS.xlsx",
     "FO": BASE_DIR / "BBDD_calls2.xlsx",
 }
-FORECAST_HORIZON = {"RRSS": 94, "FO": 94}
+FORECAST_HORIZON = {"RRSS": 120, "FO": 120}
 
 # ── Nombres de los días --------------------------------------------------------
 DAY_NAMES = {
