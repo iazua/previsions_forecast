@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 from datetime import timedelta
+import numpy as np
 import plotly.graph_objects as go   # Plotly para gráficos interactivos
 from pathlib import Path
 
@@ -136,10 +137,7 @@ hist_df = load_historical(BASES[fuente])
 # ╭──────────────────────────────────────────────╮
 # │ Helpers                                      │
 # ╰──────────────────────────────────────────────╯
-def create_future(start, n):
-    return pd.DataFrame({"dat": [start + timedelta(days=i) for i in range(1, n + 1)]})
-
-def add_features(df):
+def create_time_features(df):
     df = df.copy()
     df["year"] = df["dat"].dt.year
     df["month"] = df["dat"].dt.month
@@ -150,8 +148,40 @@ def add_features(df):
     df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
     df["is_month_start"] = df["dat"].dt.is_month_start.astype(int)
     df["is_month_end"] = df["dat"].dt.is_month_end.astype(int)
-    df["cyb_encoded"] = le.transform(["NO"] * len(df))
     return df
+
+def add_lag_features(df):
+    df = df.sort_values(["cyb", "dat"]).copy()
+    grouped = df.groupby("cyb")
+    df["lag_1"] = grouped["con"].shift(1)
+    df["lag_7"] = grouped["con"].shift(7)
+    df["lag_30"] = grouped["con"].shift(30)
+    df["rolling_mean_7"] = grouped["con"].shift(1).rolling(window=7).mean().reset_index(level=0, drop=True)
+    df["rolling_std_7"] = grouped["con"].shift(1).rolling(window=7).std().reset_index(level=0, drop=True)
+    df["rolling_mean_30"] = grouped["con"].shift(1).rolling(window=30).mean().reset_index(level=0, drop=True)
+    return df
+
+def prepare_features(df):
+    df = create_time_features(df)
+    df["cyb_encoded"] = le.transform(df["cyb"])
+    df = add_lag_features(df)
+    return df
+
+def forecast(df_hist, periods, cyb_dates=None):
+    cyb_dates = cyb_dates or set()
+    df = df_hist[["dat", "con", "cyb"]].sort_values("dat").copy()
+    preds = []
+    for _ in range(periods):
+        next_date = df["dat"].max() + timedelta(days=1)
+        cyb_flag = "SI" if next_date in cyb_dates else "NO"
+        new_row = pd.DataFrame({"dat": [next_date], "con": [np.nan], "cyb": [cyb_flag]})
+        df = pd.concat([df, new_row], ignore_index=True)
+        feat_df = prepare_features(df).dropna()
+        features_row = feat_df.loc[feat_df["dat"] == next_date, FEATURES]
+        pred_val = model.predict(features_row)[0]
+        df.loc[df["dat"] == next_date, "con"] = pred_val
+        preds.append({"dat": next_date, "con_pred": int(round(pred_val)), "cyb": cyb_flag})
+    return pd.DataFrame(preds)
 
 def make_plot(hist, fut, title):
     fig = go.Figure()
@@ -175,11 +205,13 @@ def make_plot(hist, fut, title):
     return fig
 
 # ── Predicción ─────────────────────────────────
-future_df = add_features(create_future(last_dt, periods))
-FEATURES = ["year", "month", "day", "day_of_week", "week_of_year",
-            "week_of_month", "is_weekend", "is_month_start",
-            "is_month_end", "cyb_encoded"]
-future_df["con_pred"] = model.predict(future_df[FEATURES]).round().astype(int)
+FEATURES = [
+    "year", "month", "day", "day_of_week", "week_of_year",
+    "week_of_month", "is_weekend", "is_month_start", "is_month_end",
+    "cyb_encoded", "lag_1", "lag_7", "lag_30",
+    "rolling_mean_7", "rolling_std_7", "rolling_mean_30"
+]
+future_df = forecast(hist_df, periods)
 
 # ╭──────────────────────────────────────────────╮
 # │ Ajustes de predicción                        │
@@ -193,9 +225,8 @@ with adjust_box:
     st.info(f"**R²:** {r2:.4f} | **MAE:** {mae:.4f}")
 
 if sel:
-    sel_dt = pd.to_datetime(sel)
-    future_df.loc[future_df["dat"].isin(sel_dt), "cyb_encoded"] = le.transform(["SI"] * len(sel_dt))
-    future_df["con_pred"] = model.predict(future_df[FEATURES]).round().astype(int)
+    sel_dt = set(pd.to_datetime(sel))
+    future_df = forecast(hist_df, periods, cyb_dates=sel_dt)
     adjust_box.success("Predicciones actualizadas ✔️")
 
 # ╭──────────────────────────────────────────────╮
