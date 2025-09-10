@@ -34,14 +34,32 @@ def create_time_features(df):
 
 data = create_time_features(data)
 
+# Características de series de tiempo para capturar fluctuaciones
+def add_lag_features(df):
+    df = df.sort_values(['cyb', 'dat']).copy()
+    grouped = df.groupby('cyb')
+    df['lag_1'] = grouped['con'].shift(1)
+    df['lag_7'] = grouped['con'].shift(7)
+    df['lag_30'] = grouped['con'].shift(30)
+    df['rolling_mean_7'] = grouped['con'].shift(1).rolling(window=7).mean().reset_index(level=0, drop=True)
+    df['rolling_std_7'] = grouped['con'].shift(1).rolling(window=7).std().reset_index(level=0, drop=True)
+    df['rolling_mean_30'] = grouped['con'].shift(1).rolling(window=30).mean().reset_index(level=0, drop=True)
+    return df
+
+data = add_lag_features(data)
+data.dropna(inplace=True)
+
 # Codificar la variable categórica 'cyb'
 le = LabelEncoder()
 data['cyb_encoded'] = le.fit_transform(data['cyb'])
 
 # Preparar características y objetivo
-features = ['year', 'month', 'day', 'day_of_week', 'week_of_year', 
-            'week_of_month', 'is_weekend', 'is_month_start', 
-            'is_month_end', 'cyb_encoded']
+features = [
+    'year', 'month', 'day', 'day_of_week', 'week_of_year',
+    'week_of_month', 'is_weekend', 'is_month_start', 'is_month_end',
+    'cyb_encoded', 'lag_1', 'lag_7', 'lag_30',
+    'rolling_mean_7', 'rolling_std_7', 'rolling_mean_30'
+]
 X = data[features]
 y = data['con']
 
