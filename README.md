@@ -30,7 +30,10 @@ desktop and mobile browsers (Android and iOS).
 ```bash
 python train_models_FO.py
 ```
-Adjust the file paths inside `train_models_FO.py` if your data is stored elsewhere.
+The script now adds extensive time-based features (e.g. quarter, day of year,
+cyclical encodings and additional lag/rolling statistics) and reports R2, MAE
+and RMSE scores for each dataset. Adjust the file paths inside
+`train_models_FO.py` if your data is stored elsewhere.
 
 ## Requirements
 All required Python packages are listed in `requirements.txt`.
