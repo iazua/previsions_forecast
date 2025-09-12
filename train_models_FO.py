@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import TimeSeriesSplit, RandomizedSearchCV
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 import pickle
@@ -84,10 +84,29 @@ def train_model(data_path, model_path):
     X = df[FEATURES]
     y = df["con"]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Use chronological split for time series
+    split_index = int(len(df) * 0.8)
+    X_train, X_test = X.iloc[:split_index], X.iloc[split_index:]
+    y_train, y_test = y.iloc[:split_index], y.iloc[split_index:]
 
-    model = RandomForestRegressor(n_estimators=200, random_state=42, min_samples_split=5)
-    model.fit(X_train, y_train)
+    # Hyperparameter tuning with time-series cross-validation
+    tscv = TimeSeriesSplit(n_splits=3)
+    param_dist = {
+        "n_estimators": [100, 200, 300],
+        "max_depth": [None, 10, 20],
+        "min_samples_split": [2, 5, 10],
+        "min_samples_leaf": [1, 2, 4],
+    }
+    search = RandomizedSearchCV(
+        RandomForestRegressor(random_state=42),
+        param_distributions=param_dist,
+        n_iter=10,
+        cv=tscv,
+        n_jobs=-1,
+        random_state=42,
+    )
+    search.fit(X_train, y_train)
+    model = search.best_estimator_
 
     y_pred = model.predict(X_test)
     r2 = r2_score(y_test, y_pred)
@@ -101,6 +120,7 @@ def train_model(data_path, model_path):
             "r2": r2,
             "mae": mae,
             "rmse": rmse,
+            "params": search.best_params_,
             "last_date": df["dat"].max(),
         }, f)
 
