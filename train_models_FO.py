@@ -1,90 +1,90 @@
 import pandas as pd
-import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error
 from sklearn.preprocessing import LabelEncoder
 import pickle
-from datetime import datetime, timedelta
 from pathlib import Path
 
-# Cargar los datos
-DATA_PATH = Path(__file__).resolve().parent / "BBDD_calls_RRSS.xlsx"
-data = pd.read_excel(DATA_PATH)
+BASE_DIR = Path(__file__).resolve().parent
 
-# Limpieza y preprocesamiento
-# Convertir la columna de fecha a datetime
-data['dat'] = pd.to_datetime(data['dat'], dayfirst=True)
+SOURCES = {
+    "RRSS": {
+        "data": BASE_DIR / "BBDD_calls_RRSS.xlsx",
+        "model": BASE_DIR / "con_prediction_model_rrss.pkl",
+    },
+    "FO": {
+        "data": BASE_DIR / "BBDD_calls2.xlsx",
+        "model": BASE_DIR / "con_prediction_model.pkl",
+    },
+}
 
-# Filtrar filas donde 'con' es 0 (días no trabajados)
-data = data[data['con'] > 0].copy()
-
-# Crear características temporales
 def create_time_features(df):
-    df['year'] = df['dat'].dt.year
-    df['month'] = df['dat'].dt.month
-    df['day'] = df['dat'].dt.day
-    df['day_of_week'] = df['dat'].dt.dayofweek  # 0 es lunes, 6 es domingo
-    df['week_of_year'] = df['dat'].dt.isocalendar().week
-    df['week_of_month'] = (df['dat'].dt.day - 1) // 7 + 1
-    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
-    df['is_month_start'] = df['dat'].dt.is_month_start.astype(int)
-    df['is_month_end'] = df['dat'].dt.is_month_end.astype(int)
+    df["year"] = df["dat"].dt.year
+    df["month"] = df["dat"].dt.month
+    df["day"] = df["dat"].dt.day
+    df["day_of_week"] = df["dat"].dt.dayofweek
+    df["week_of_year"] = df["dat"].dt.isocalendar().week
+    df["week_of_month"] = (df["dat"].dt.day - 1) // 7 + 1
+    df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
+    df["is_month_start"] = df["dat"].dt.is_month_start.astype(int)
+    df["is_month_end"] = df["dat"].dt.is_month_end.astype(int)
     return df
 
-data = create_time_features(data)
-
-# Características de series de tiempo para capturar fluctuaciones
 def add_lag_features(df):
-    df = df.sort_values(['cyb', 'dat']).copy()
-    grouped = df.groupby('cyb')
-    df['lag_1'] = grouped['con'].shift(1)
-    df['lag_7'] = grouped['con'].shift(7)
-    df['lag_30'] = grouped['con'].shift(30)
-    df['rolling_mean_7'] = grouped['con'].shift(1).rolling(window=7).mean().reset_index(level=0, drop=True)
-    df['rolling_std_7'] = grouped['con'].shift(1).rolling(window=7).std().reset_index(level=0, drop=True)
-    df['rolling_mean_30'] = grouped['con'].shift(1).rolling(window=30).mean().reset_index(level=0, drop=True)
+    df = df.sort_values(["cyb", "dat"]).copy()
+    grouped = df.groupby("cyb")
+    df["lag_1"] = grouped["con"].shift(1)
+    df["lag_7"] = grouped["con"].shift(7)
+    df["lag_30"] = grouped["con"].shift(30)
+    df["rolling_mean_7"] = grouped["con"].shift(1).rolling(window=7).mean().reset_index(level=0, drop=True)
+    df["rolling_std_7"] = grouped["con"].shift(1).rolling(window=7).std().reset_index(level=0, drop=True)
+    df["rolling_mean_30"] = grouped["con"].shift(1).rolling(window=30).mean().reset_index(level=0, drop=True)
     return df
 
-data = add_lag_features(data)
-data.dropna(inplace=True)
-
-# Codificar la variable categórica 'cyb'
-le = LabelEncoder()
-data['cyb_encoded'] = le.fit_transform(data['cyb'])
-
-# Preparar características y objetivo
-features = [
-    'year', 'month', 'day', 'day_of_week', 'week_of_year',
-    'week_of_month', 'is_weekend', 'is_month_start', 'is_month_end',
-    'cyb_encoded', 'lag_1', 'lag_7', 'lag_30',
-    'rolling_mean_7', 'rolling_std_7', 'rolling_mean_30'
+FEATURES = [
+    "year", "month", "day", "day_of_week", "week_of_year",
+    "week_of_month", "is_weekend", "is_month_start", "is_month_end",
+    "cyb_encoded", "lag_1", "lag_7", "lag_30",
+    "rolling_mean_7", "rolling_std_7", "rolling_mean_30",
 ]
-X = data[features]
-y = data['con']
 
-# Dividir datos en entrenamiento y prueba
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def train_model(data_path, model_path):
+    df = pd.read_excel(data_path, usecols=["dat", "con", "cyb"])
+    df["dat"] = pd.to_datetime(df["dat"], dayfirst=True)
+    df = df[df["con"] > 0].copy()
 
-# Entrenar modelo (Random Forest por su capacidad para capturar relaciones no lineales y estacionalidad)
-model = RandomForestRegressor(n_estimators=200, random_state=42, min_samples_split=5)
-model.fit(X_train, y_train)
+    df = create_time_features(df)
+    df = add_lag_features(df)
+    df.dropna(inplace=True)
 
-# Evaluar modelo
-y_pred = model.predict(X_test)
-r2 = r2_score(y_test, y_pred)
-mae = mean_absolute_error(y_test, y_pred)
-print(f"R2 Score: {r2:.4f}")
-print(f"MAE: {mae:.4f}")
+    le = LabelEncoder()
+    df["cyb_encoded"] = le.fit_transform(df["cyb"])
 
-# Guardar modelo y encoder
-with open('con_prediction_model_rrss.pkl', 'wb') as f:
-    pickle.dump({
-        'model': model,
-        'encoder': le,
-        'r2': r2,
-        'mae': mae,
-        'last_date': data['dat'].max()
-    }, f)
+    X = df[FEATURES]
+    y = df["con"]
 
-print("Modelo entrenado y guardado exitosamente.")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    model = RandomForestRegressor(n_estimators=200, random_state=42, min_samples_split=5)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+
+    with open(model_path, "wb") as f:
+        pickle.dump({
+            "model": model,
+            "encoder": le,
+            "r2": r2,
+            "mae": mae,
+            "last_date": df["dat"].max(),
+        }, f)
+
+    print(f"Saved {model_path.name}: R2={r2:.4f}, MAE={mae:.4f}")
+
+if __name__ == "__main__":
+    for name, paths in SOURCES.items():
+        print(f"Training {name} model...")
+        train_model(paths["data"], paths["model"])
