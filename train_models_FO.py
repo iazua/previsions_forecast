@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 import pickle
 from pathlib import Path
@@ -29,6 +30,16 @@ def create_time_features(df):
     df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
     df["is_month_start"] = df["dat"].dt.is_month_start.astype(int)
     df["is_month_end"] = df["dat"].dt.is_month_end.astype(int)
+    df["quarter"] = df["dat"].dt.quarter
+    df["day_of_year"] = df["dat"].dt.dayofyear
+    df["is_quarter_start"] = df["dat"].dt.is_quarter_start.astype(int)
+    df["is_quarter_end"] = df["dat"].dt.is_quarter_end.astype(int)
+    df["is_year_start"] = df["dat"].dt.is_year_start.astype(int)
+    df["is_year_end"] = df["dat"].dt.is_year_end.astype(int)
+    df["sin_day_of_year"] = np.sin(2 * np.pi * df["day_of_year"] / 365)
+    df["cos_day_of_year"] = np.cos(2 * np.pi * df["day_of_year"] / 365)
+    df["sin_week_of_year"] = np.sin(2 * np.pi * df["week_of_year"] / 52)
+    df["cos_week_of_year"] = np.cos(2 * np.pi * df["week_of_year"] / 52)
     return df
 
 def add_lag_features(df):
@@ -37,16 +48,25 @@ def add_lag_features(df):
     df["lag_1"] = grouped["con"].shift(1)
     df["lag_7"] = grouped["con"].shift(7)
     df["lag_30"] = grouped["con"].shift(30)
+    df["lag_14"] = grouped["con"].shift(14)
+    df["lag_60"] = grouped["con"].shift(60)
     df["rolling_mean_7"] = grouped["con"].shift(1).rolling(window=7).mean().reset_index(level=0, drop=True)
     df["rolling_std_7"] = grouped["con"].shift(1).rolling(window=7).std().reset_index(level=0, drop=True)
+    df["rolling_mean_14"] = grouped["con"].shift(1).rolling(window=14).mean().reset_index(level=0, drop=True)
+    df["rolling_std_14"] = grouped["con"].shift(1).rolling(window=14).std().reset_index(level=0, drop=True)
     df["rolling_mean_30"] = grouped["con"].shift(1).rolling(window=30).mean().reset_index(level=0, drop=True)
+    df["rolling_mean_60"] = grouped["con"].shift(1).rolling(window=60).mean().reset_index(level=0, drop=True)
     return df
 
 FEATURES = [
     "year", "month", "day", "day_of_week", "week_of_year",
     "week_of_month", "is_weekend", "is_month_start", "is_month_end",
-    "cyb_encoded", "lag_1", "lag_7", "lag_30",
-    "rolling_mean_7", "rolling_std_7", "rolling_mean_30",
+    "quarter", "day_of_year", "is_quarter_start", "is_quarter_end",
+    "is_year_start", "is_year_end", "sin_day_of_year", "cos_day_of_year",
+    "sin_week_of_year", "cos_week_of_year",
+    "cyb_encoded", "lag_1", "lag_7", "lag_14", "lag_30", "lag_60",
+    "rolling_mean_7", "rolling_std_7", "rolling_mean_14", "rolling_std_14",
+    "rolling_mean_30", "rolling_mean_60",
 ]
 
 def train_model(data_path, model_path):
@@ -72,6 +92,7 @@ def train_model(data_path, model_path):
     y_pred = model.predict(X_test)
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
+    rmse = mean_squared_error(y_test, y_pred) ** 0.5
 
     with open(model_path, "wb") as f:
         pickle.dump({
@@ -79,10 +100,11 @@ def train_model(data_path, model_path):
             "encoder": le,
             "r2": r2,
             "mae": mae,
+            "rmse": rmse,
             "last_date": df["dat"].max(),
         }, f)
 
-    print(f"Saved {model_path.name}: R2={r2:.4f}, MAE={mae:.4f}")
+    print(f"Saved {model_path.name}: R2={r2:.4f}, MAE={mae:.4f}, RMSE={rmse:.4f}")
 
 if __name__ == "__main__":
     for name, paths in SOURCES.items():
