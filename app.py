@@ -160,6 +160,10 @@ FEATURES = [
 def forecast(model, hist_df, periods, le, cyb_dates):
     df = hist_df[["dat", "con", "cyb"]].copy().sort_values("dat")
     df["cyb"] = df["cyb"].fillna("NO")
+    # Ensure the label encoder can handle both expected labels
+    if hasattr(le, "classes_"):
+        required = np.array(["NO", "SI"], dtype=object)
+        le.classes_ = np.unique(np.concatenate([le.classes_.astype(object), required]))
     preds = []
     for _ in range(periods):
         next_date = df["dat"].max() + timedelta(days=1)
