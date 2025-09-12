@@ -97,9 +97,10 @@ le = mdata["encoder"]
 r2 = mdata["r2"]
 mae = mdata["mae"]
 rmse = mdata["rmse"]
-last_dt = mdata["last_date"]
 periods = FORECAST_HORIZON[fuente]
 hist_df = load_historical(BASES[fuente])
+# Forecasts should begin the day after the latest entry in the data
+last_dt = hist_df["dat"].max()
 date_options = pd.date_range(last_dt + timedelta(days=1), periods=periods)
 
 # ╭──────────────────────────────────────────────╮

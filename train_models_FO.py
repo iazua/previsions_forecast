@@ -81,13 +81,15 @@ def train_model(data_path, model_path):
     le = LabelEncoder()
     df["cyb_encoded"] = le.fit_transform(df["cyb"])
 
-    X = df[FEATURES]
-    y = df["con"]
-
-    # Use chronological split for time series
+    # Reserve the last 20% of records for evaluation
     split_index = int(len(df) * 0.8)
-    X_train, X_test = X.iloc[:split_index], X.iloc[split_index:]
-    y_train, y_test = y.iloc[:split_index], y.iloc[split_index:]
+    train_df = df.iloc[:split_index]
+    test_df = df.iloc[split_index:]
+
+    X_train = train_df[FEATURES]
+    y_train = train_df["con"]
+    X_test = test_df[FEATURES]
+    y_test = test_df["con"]
 
     # Hyperparameter tuning with time-series cross-validation
     tscv = TimeSeriesSplit(n_splits=3)
