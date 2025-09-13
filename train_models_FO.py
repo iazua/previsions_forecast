@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import TimeSeriesSplit, RandomizedSearchCV
+from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 import pickle
@@ -98,20 +98,19 @@ def train_model(data_path, model_path):
     sample_weight = train_df["recency_weight"]
 
     # Hyperparameter tuning with time-series cross-validation
-    tscv = TimeSeriesSplit(n_splits=3)
-    param_dist = {
-        "n_estimators": [100, 200, 300],
-        "max_depth": [None, 10, 20],
-        "min_samples_split": [2, 5, 10],
-        "min_samples_leaf": [1, 2, 4],
+    tscv = TimeSeriesSplit(n_splits=5)
+    param_grid = {
+        "n_estimators": [200, 400, 800],
+        "max_depth": [None, 20, 40],
+        "min_samples_split": [2, 5],
+        "min_samples_leaf": [1, 2],
+        "max_features": ["sqrt", "log2"],
     }
-    search = RandomizedSearchCV(
+    search = GridSearchCV(
         RandomForestRegressor(random_state=42),
-        param_distributions=param_dist,
-        n_iter=10,
+        param_grid=param_grid,
         cv=tscv,
         n_jobs=-1,
-        random_state=42,
     )
     search.fit(X_train, y_train, sample_weight=sample_weight)
     model = search.best_estimator_
