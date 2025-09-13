@@ -78,6 +78,11 @@ def train_model(data_path, model_path):
     df = add_lag_features(df)
     df.dropna(inplace=True)
 
+    # Ensure records are ordered chronologically and compute recency weights
+    df = df.sort_values("dat").reset_index(drop=True)
+    max_date = df["dat"].max()
+    df["recency_weight"] = np.exp(-0.01 * (max_date - df["dat"]).dt.days)
+
     le = LabelEncoder()
     df["cyb_encoded"] = le.fit_transform(df["cyb"])
 
@@ -90,6 +95,7 @@ def train_model(data_path, model_path):
     y_train = train_df["con"]
     X_test = test_df[FEATURES]
     y_test = test_df["con"]
+    sample_weight = train_df["recency_weight"]
 
     # Hyperparameter tuning with time-series cross-validation
     tscv = TimeSeriesSplit(n_splits=3)
@@ -107,7 +113,7 @@ def train_model(data_path, model_path):
         n_jobs=-1,
         random_state=42,
     )
-    search.fit(X_train, y_train)
+    search.fit(X_train, y_train, sample_weight=sample_weight)
     model = search.best_estimator_
 
     y_pred = model.predict(X_test)
